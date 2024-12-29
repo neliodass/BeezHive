@@ -17,7 +17,7 @@ void spawnQueen()
 {
     pid_t queen_pid = fork();
     if (queen_pid == 0){
-        execl("./queenBee","queenBee",NULL);
+        execl("./queenBee","queenBee","&",NULL);
         perror("Failed to exec queenBee");
         exit(EXIT_FAILURE);
     }
@@ -30,7 +30,7 @@ void spawnWorkerBee()
 {
     pid_t bee_pid = fork();
     if (bee_pid == 0){
-        execl("./workerBee","workerBee",NULL);
+        execl("./workerBee","workerBee","adult","&",NULL);
         perror("Failed to exec workerBee");
         exit(EXIT_FAILURE);
     }
@@ -49,18 +49,26 @@ void setupHive()
     hive->bees_in_hive = 0;
     entry_sem_id = get_entry_semaphores();
     other_sem_id = get_other_semaphores();
+    printf("Pierwszy semafor\n");
     semctl(entry_sem_id,LEFT_ENTRY_IDX,SETVAL,1);   
+    printf("Drugi semafor\n");
     semctl(entry_sem_id,RIGHT_ENTRY_IDX,SETVAL,1);
+    printf("trzeci semafor\n");
     semctl(entry_sem_id,ENTER_HIVE_IDX,SETVAL,0);
+    printf("czwarty semafor\n");
     semctl(other_sem_id,HIVE_STRUCTURE_SEM_IDX,SETVAL,1);
     semaphore_lock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
+    printf("Creating queen and worker bees\n");
     spawnQueen();
     hive->bees_in_hive+=1;
     for (int i = 0; i < N-1; i++){
         spawnWorkerBee();
         hive->bees_in_hive+=1;
     }
-    semaphore_unlock(other_sem_id,ENTER_HIVE_IDX);
+    printf("Still\n");
+    semaphore_unlock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
+    printf("Created\n");
+
 }
 void increase_capacity(int signum) {
     semaphore_lock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);

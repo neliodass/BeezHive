@@ -1,7 +1,12 @@
 #include "hive_manager.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 #include <signal.h>
 #define PROJECT_ID 20
-#define EGG_LAY_TIME 180 //Czas wylęgania jednego jajka
+#define EGG_LAY_TIME 20 //Czas wylęgania jednego jajka
 Hive* hive;
 int shm_id;
 int other_sem_id;
@@ -9,7 +14,7 @@ int other_sem_id;
 void lay_egg(){
     sleep(EGG_LAY_TIME);
     semaphore_lock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
-    if (hive->bees_in_hive/2 < hive->bees_population){
+    if (hive->bees_in_hive < hive->bees_population/2){
         
         printf("Queen bee laid an egg\n");
         hive->bees_in_hive+=1;
@@ -25,8 +30,8 @@ void lay_egg(){
         }
         
     }
-    printf("Queen bee failed to lay an egg. Hive is overpopulated now.\n");
-    semaphore_unlock(other_sem_id,ENTER_HIVE_IDX);
+    else printf("Queen bee failed to lay an egg. Hive is overpopulated now.\n");
+    semaphore_unlock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
 }
 void cleanup(int signum) {
     detach_from_hive(hive);
@@ -37,7 +42,6 @@ void cleanup(int signum) {
 void setup(){
     setpgid(0, getppid());
     signal(SIGINT, cleanup);
-    srand(time(NULL));
     shm_id = init_shared_hive();
     hive = attach_to_hive(shm_id);
     other_sem_id = get_other_semaphores();
