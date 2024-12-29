@@ -59,7 +59,7 @@ void semaphore_lock(int sem_id, int sem_index) {
         exit(1);
     }
 }
-void semaphore_lock_priority(int sem_id, int sem_index) {
+void semaphore_lock_no_wait(int sem_id, int sem_index) {
     struct sembuf sb = {sem_index, -1, IPC_NOWAIT}; 
     if (semop(sem_id, &sb, 1) == -1) {
         perror("semop lock failed");
@@ -91,6 +91,10 @@ Hive* attach_to_hive(int shm_id)
         exit(EXIT_FAILURE);
     }
 }
-    
+void detach_from_hive(void *hive) {
+    if (shmdt(hive) == -1) {
+        perror("Failed to detach shared memory");
+    } 
+}    
 
 #endif
