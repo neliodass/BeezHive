@@ -6,8 +6,8 @@
 #include <unistd.h>
 #include<string.h>
 #include <signal.h>
-#define WORKER_LIFE_TIME 5 //Czas życia jednej pszczoły(liczba odwiedzin w ulu)
-#define OVERHEAT_TIME 5 //Czas zanim pszczoła się przegrzeje
+#define WORKER_LIFE_TIME 8 //Czas życia jednej pszczoły(liczba odwiedzin w ulu)
+#define OVERHEAT_TIME 30 //Czas zanim pszczoła się przegrzeje
 #define MIN_INCUB_TIME 50
 #define MAX_INCUB_TIME 100
 #define MAX_OUT_TIME 100
@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 {
 setpgid(0, getppid());
 signal(SIGINT, cleanup);
-srand(time(NULL));
+srand(time(NULL)^ getpid());
 if (strcmp(argv[1], "adult") == 0) {
         bee_process(); 
     } else if (strcmp(argv[1], "egg") == 0) {

@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <signal.h>
 #define PROJECT_ID 20
-#define EGG_LAY_TIME 20 //Czas wylęgania jednego jajka
+#define EGG_LAY_TIME 15 //Czas wylęgania jednego jajka
 Hive* hive;
 int shm_id;
 int other_sem_id;
@@ -20,7 +20,7 @@ void lay_egg(){
         hive->bees_in_hive+=1;
         pid_t bee_pid = fork();
         if (bee_pid == 0){
-            execl("./workerBee","workerBee","egg",NULL);
+            execl("./workerBee","workerBee","egg","&",NULL);
             perror("Failed to exec workerBee");
             exit(EXIT_FAILURE);
         }

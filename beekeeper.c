@@ -42,32 +42,26 @@ void spawnWorkerBee()
 
 void setupHive()
 {
-    //TODO: Ustawic startowa ilosc pszczol w ulu!
+
     shm_id = init_shared_hive();
     hive = attach_to_hive(shm_id);
     hive->bees_population = N;
     hive->bees_in_hive = 0;
     entry_sem_id = get_entry_semaphores();
     other_sem_id = get_other_semaphores();
-    printf("Pierwszy semafor\n");
     semctl(entry_sem_id,LEFT_ENTRY_IDX,SETVAL,1);   
-    printf("Drugi semafor\n");
     semctl(entry_sem_id,RIGHT_ENTRY_IDX,SETVAL,1);
-    printf("trzeci semafor\n");
     semctl(entry_sem_id,ENTER_HIVE_IDX,SETVAL,0);
-    printf("czwarty semafor\n");
     semctl(other_sem_id,HIVE_STRUCTURE_SEM_IDX,SETVAL,1);
     semaphore_lock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
-    printf("Creating queen and worker bees\n");
     spawnQueen();
     hive->bees_in_hive+=1;
     for (int i = 0; i < N-1; i++){
         spawnWorkerBee();
         hive->bees_in_hive+=1;
     }
-    printf("Still\n");
     semaphore_unlock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
-    printf("Created\n");
+    printf("Created queen and worker bees\n");
 
 }
 void increase_capacity(int signum) {
@@ -75,21 +69,33 @@ void increase_capacity(int signum) {
     hive->bees_population = 2 * N;
     printf("Beekeeper increased hive capacity to %d\n", hive->bees_population);
     semaphore_unlock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);
+    signal(SIGUSR1, increase_capacity);
 }
 void decrease_capacity(int signum) {
     semaphore_lock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);
     hive->bees_population = hive->bees_population / 2;
     printf("Beekeeper decreased hive capacity to %d\n", hive->bees_population);
     semaphore_unlock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);
+    signal(SIGUSR2, decrease_capacity);
+    
 }
 void cleanup(int signum) {
+    signal(SIGINT, SIG_IGN);
     killpg(getpgrp(), SIGINT);
     detach_from_hive(hive);
-    semctl(entry_sem_id, 0, IPC_RMID);
-    semctl(other_sem_id, 0, IPC_RMID);
+    if (shmctl(shm_id, IPC_RMID, NULL) == -1) {
+        perror("shmctl IPC_RMID failed");
+    }
+    if (semctl(entry_sem_id, 0, IPC_RMID) == -1) {
+        perror("semctl IPC_RMID failed for entry_sem_id");
+    }
+    if (semctl(other_sem_id, 0, IPC_RMID) == -1) {
+        perror("semctl IPC_RMID failed for other_sem_id");
+    }
     printf("Beekeeper cleaned up resources.\n");
     exit(0);
 }
+
 int main()
 {
     signal(SIGUSR1, increase_capacity);
