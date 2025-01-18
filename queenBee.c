@@ -8,16 +8,16 @@
 #include <sys/wait.h>
 #define PROJECT_ID 20
 
-#define MIN_EGG_LAY_TIME 5 //Czas wylęgania jednego jajka
-#define MAX_EGG_LAY_TIME 15 //Czas wylęgania jednego jajka
+#define MIN_EGG_LAY_TIME 2 //Czas wylęgania jednego jajka
+#define MAX_EGG_LAY_TIME 5 //Czas wylęgania jednego jajka
 Hive* hive;
 int shm_id;
 int other_sem_id;
 char log_msg[100]; 
 
-void handle_sigchld(int signum) {
+void handle_child_termination(int signum) {
     while (waitpid(-1, NULL, WNOHANG) > 0);
-    signal(SIGCHLD, handle_sigchld);
+    signal(SIGCHLD, handle_child_termination);
 }
 
 void lay_egg(){
@@ -64,7 +64,7 @@ void cleanup(int signum) {
 void setup(){
     setpgid(0, getppid());
     signal(SIGINT, cleanup);
-    signal(SIGCHLD, handle_sigchld);
+    signal(SIGCHLD, handle_child_termination);
     shm_id = init_shared_hive();
     hive = attach_to_hive(shm_id);
     other_sem_id = get_other_semaphores();

@@ -14,9 +14,9 @@ int entry_sem_id,other_sem_id;
 char log_msg[100];
 char start_time_str[30];
 
-void handle_sigchld(int signum) {
+void handle_child_termination(int signum) {
     while (waitpid(-1, NULL, WNOHANG) > 0);
-    signal(SIGCHLD, handle_sigchld);
+    signal(SIGCHLD, handle_child_termination);
 }
 void rename_log_file() {
     char new_log_file_name[50];
@@ -64,7 +64,6 @@ void setupHive()
     other_sem_id = get_other_semaphores();
     semctl(entry_sem_id,LEFT_ENTRY_IDX,SETVAL,1);   
     semctl(entry_sem_id,RIGHT_ENTRY_IDX,SETVAL,1);
-    semctl(entry_sem_id,ENTER_HIVE_IDX,SETVAL,0);
     semctl(other_sem_id,HIVE_STRUCTURE_SEM_IDX,SETVAL,1);
     semaphore_lock(other_sem_id,HIVE_STRUCTURE_SEM_IDX);
     spawnQueen();
@@ -89,6 +88,13 @@ void increase_capacity(int signum) {
 }
 void decrease_capacity(int signum) {
     semaphore_lock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);
+    if (hive->max_bees_population < 2) {
+        snprintf(log_msg,sizeof(log_msg),"Hive capacity cannot be decreased further\n");
+        log_message(log_msg);
+        semaphore_unlock(other_sem_id, HIVE_STRUCTURE_SEM_IDX);
+        signal(SIGUSR2, decrease_capacity);
+        return;
+    }
     hive->max_bees_population = hive->max_bees_population / 2;
     snprintf(log_msg,sizeof(log_msg),"Beekeeper decreased hive capacity to %d\n", hive->max_bees_population);
     log_message(log_msg);
@@ -121,7 +127,7 @@ int main()
     signal(SIGUSR1, increase_capacity);
     signal(SIGUSR2, decrease_capacity);
     signal(SIGINT, cleanup);
-    signal(SIGCHLD, handle_sigchld);
+    signal(SIGCHLD, handle_child_termination);
     struct timeval tv;
     gettimeofday(&tv, NULL);
     time_t now = tv.tv_sec;
